@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=AgentMail Agent Setup
+Comment=Finish setting up your email agent (Nous sign-in + AgentMail key)
+Exec=/usr/local/bin/agentmail-onboard-launch.sh
+Icon=mail-message-new
+Terminal=false

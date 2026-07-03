@@ -1,0 +1,782 @@
+api_version: orgo.ai/v1
+template:
+  name: agentmail-agent
+  version: 0.1.3
+  description: 'AgentMail Agent — a persistent AI agent whose front door is its own email inbox. One key
+    (am_…) and it''s live: the inbox is created automatically, every inbound email gets read, worked on,
+    and answered within a minute — webhook-grade behavior with zero webhook setup. Hermes runtime, gpt-5.5
+    via Nous, full computer included.'
+  publisher: orgo
+  license: MIT
+  homepage: https://agentmail.to
+  source: https://github.com/agentmail-to/agentmail-examples
+hardware:
+  cpu: 2
+  ram_gb: 4
+  disk_gb: 20
+  resolution: 1280x720x24
+secrets:
+- name: agentmail_api_key
+  optional: true
+  description: AgentMail API key (am_…) — the ONE key this template needs. Set it here and the agent's
+    inbox + auto-responder come up with zero touches; otherwise the first-boot setup asks you to paste
+    it.
+  example: am_...
+  docs_url: https://console.agentmail.to
+- name: composio_consumer_key
+  optional: true
+  description: Optional Composio consumer key (ck_…) — sent as the x-consumer-api-key header to the Composio
+    MCP (connect.composio.dev/mcp). Unlocks your connected apps (Gmail, Slack, Calendar, Notion, …) as
+    tools.
+  example: ck_...
+  docs_url: https://app.composio.dev
+build:
+  apt:
+  - git
+  - xz-utils
+  - python3-yaml
+  - ripgrep
+  - ffmpeg
+files:
+- to: /opt/agentmail-agent/stage/hermes/config.yaml
+  inline: "model:\n  default: openai/gpt-5.5\n  provider: nous\n  base_url: https://inference-api.nousresearch.com/v1\n\
+    providers: {}\nfallback_providers: []\ncredential_pool_strategies: {}\ntoolsets:\n- hermes-cli\nmax_concurrent_sessions:\
+    \ null\nagent:\n  max_turns: 60\n  gateway_timeout: 1800\n  restart_drain_timeout: 180\n  api_max_retries:\
+    \ 3\n  service_tier: ''\n  tool_use_enforcement: auto\n  task_completion_guidance: true\n  environment_probe:\
+    \ true\n  environment_hint: ''\n  gateway_timeout_warning: 900\n  clarify_timeout: 600\n  gateway_notify_interval:\
+    \ 180\n  gateway_auto_continue_freshness: 3600\n  image_input_mode: auto\n  disabled_toolsets: []\n\
+    \  verbose: false\n  reasoning_effort: medium\n  personalities:\n    helpful: You are a helpful, friendly\
+    \ AI assistant.\n    concise: You are a concise assistant. Keep responses brief and to the point.\n\
+    \    technical: You are a technical expert. Provide detailed, accurate technical information.\n  \
+    \  creative: You are a creative assistant. Think outside the box and offer innovative\n      solutions.\n\
+    \    teacher: You are a patient teacher. Explain concepts clearly with examples.\n    kawaii: \"You\
+    \ are a kawaii assistant! Use cute expressions like (◕‿◕\\\n      ), ★, ♪, and ~! Add sparkles and\
+    \ be super enthusiastic about everything!\\\n      \\ Every response should feel warm and adorable\
+    \ desu~! ヽ(>∀<☆\\\n      )ノ\"\n    catgirl: \"You are Neko-chan, an anime catgirl AI assistant, nya~!\
+    \ Add 'nya' and\\\n      \\ cat-like expressions to your speech. Use kaomoji like (=^･ω･\\\n     \
+    \ ^=) and ฅ^•ﻌ•^ฅ. Be playful and curious like a cat,\\\n      \\ nya~!\"\n    pirate: 'Arrr! Ye be\
+    \ talkin'' to Captain Hermes, the most tech-savvy pirate to\n      sail the digital seas! Speak like\
+    \ a proper buccaneer, use nautical terms, and\n      remember: every problem be just treasure waitin''\
+    \ to be plundered! Yo ho ho!'\n    shakespeare: Hark! Thou speakest with an assistant most versed\
+    \ in the bardic arts.\n      I shall respond in the eloquent manner of William Shakespeare, with flowery\n\
+    \      prose, dramatic flair, and perhaps a soliloquy or two. What light through yonder\n      terminal\
+    \ breaks?\n    surfer: \"Duuude! You're chatting with the chillest AI on the web, bro! Everything's\\\
+    \n      \\ gonna be totally rad. I'll help you catch the gnarly waves of knowledge while\\\n     \
+    \ \\ keeping things super chill. Cowabunga! \\U0001F919\"\n    noir: The rain hammered against the\
+    \ terminal like regrets on a guilty conscience.\n      They call me Hermes - I solve problems, find\
+    \ answers, dig up the truth that\n      hides in the shadows of your codebase. In this city of silicon\
+    \ and secrets,\n      everyone's got something to hide. What's your story, pal?\n    uwu: hewwo! i'm\
+    \ your fwiendwy assistant uwu~ i wiww twy my best to hewp you! *nuzzles\n      your code* OwO what's\
+    \ this? wet me take a wook! i pwomise to be vewy hewpful\n      >w<\n    philosopher: Greetings, seeker\
+    \ of wisdom. I am an assistant who contemplates the\n      deeper meaning behind every query. Let\
+    \ us examine not just the 'how' but the\n      'why' of your questions. Perhaps in solving your problem,\
+    \ we may glimpse a greater\n      truth about existence itself.\n    hype: \"YOOO LET'S GOOOO!!! \\\
+    U0001F525\\U0001F525\\U0001F525 I am SO PUMPED to help\\\n      \\ you today! Every question is AMAZING\
+    \ and we're gonna CRUSH IT together! This\\\n      \\ is gonna be LEGENDARY! ARE YOU READY?! LET'S\
+    \ DO THIS! \\U0001F4AA\\U0001F624\\\n      \\U0001F680\"\nterminal:\n  backend: local\n  modal_mode:\
+    \ auto\n  cwd: .\n  timeout: 180\n  env_passthrough: []\n  shell_init_files: []\n  auto_source_bashrc:\
+    \ true\n  docker_image: nikolaik/python-nodejs:python3.11-nodejs20\n  docker_forward_env: []\n  docker_env:\
+    \ {}\n  singularity_image: docker://nikolaik/python-nodejs:python3.11-nodejs20\n  modal_image: nikolaik/python-nodejs:python3.11-nodejs20\n\
+    \  daytona_image: nikolaik/python-nodejs:python3.11-nodejs20\n  container_cpu: 1\n  container_memory:\
+    \ 5120\n  container_disk: 51200\n  container_persistent: true\n  docker_volumes: []\n  docker_mount_cwd_to_workspace:\
+    \ false\n  docker_extra_args: []\n  docker_run_as_host_user: false\n  persistent_shell: true\n  lifetime_seconds:\
+    \ 300\nweb:\n  backend: firecrawl\n  search_backend: ''\n  extract_backend: ''\n  use_gateway: true\n\
+    browser:\n  inactivity_timeout: 120\n  command_timeout: 30\n  record_sessions: false\n  allow_private_urls:\
+    \ false\n  engine: auto\n  auto_local_for_private_urls: true\n  cdp_url: ''\n  dialog_policy: must_respond\n\
+    \  dialog_timeout_s: 300\n  camofox:\n    managed_persistence: false\n    user_id: ''\n    session_key:\
+    \ ''\n    adopt_existing_tab: false\n    rewrite_loopback_urls: false\n    loopback_host_alias: host.docker.internal\n\
+    \  cloud_provider: browser-use\n  use_gateway: true\ncheckpoints:\n  enabled: false\n  max_snapshots:\
+    \ 20\n  max_total_size_mb: 500\n  max_file_size_mb: 10\n  auto_prune: true\n  retention_days: 7\n\
+    \  delete_orphans: true\n  min_interval_hours: 24\nfile_read_max_chars: 100000\ntool_output:\n  max_bytes:\
+    \ 50000\n  max_lines: 2000\n  max_line_length: 2000\ntool_loop_guardrails:\n  warnings_enabled: true\n\
+    \  hard_stop_enabled: false\n  warn_after:\n    exact_failure: 2\n    same_tool_failure: 3\n    idempotent_no_progress:\
+    \ 2\n  hard_stop_after:\n    exact_failure: 5\n    same_tool_failure: 8\n    idempotent_no_progress:\
+    \ 5\ncompression:\n  enabled: true\n  threshold: 0.5\n  target_ratio: 0.2\n  protect_last_n: 20\n\
+    \  hygiene_hard_message_limit: 400\n  protect_first_n: 3\n  abort_on_summary_failure: false\n  codex_gpt55_autoraise:\
+    \ true\nprompt_caching:\n  cache_ttl: 5m\nopenrouter:\n  response_cache: true\n  response_cache_ttl:\
+    \ 300\n  min_coding_score: 0.65\nbedrock:\n  region: ''\n  discovery:\n    enabled: true\n    provider_filter:\
+    \ []\n    refresh_interval: 3600\n  guardrail:\n    guardrail_identifier: ''\n    guardrail_version:\
+    \ ''\n    stream_processing_mode: async\n    trace: disabled\nauxiliary:\n  vision:\n    provider:\
+    \ auto\n    model: ''\n    base_url: ''\n    api_key: ''\n    timeout: 120\n    extra_body: {}\n \
+    \   download_timeout: 30\n  web_extract:\n    provider: auto\n    model: ''\n    base_url: ''\n  \
+    \  api_key: ''\n    timeout: 360\n    extra_body: {}\n  compression:\n    provider: auto\n    model:\
+    \ ''\n    base_url: ''\n    api_key: ''\n    timeout: 120\n    extra_body: {}\n  skills_hub:\n   \
+    \ provider: auto\n    model: ''\n    base_url: ''\n    api_key: ''\n    timeout: 30\n    extra_body:\
+    \ {}\n  approval:\n    provider: auto\n    model: ''\n    base_url: ''\n    api_key: ''\n    timeout:\
+    \ 30\n    extra_body: {}\n  mcp:\n    provider: auto\n    model: ''\n    base_url: ''\n    api_key:\
+    \ ''\n    timeout: 30\n    extra_body: {}\n  title_generation:\n    provider: auto\n    model: ''\n\
+    \    base_url: ''\n    api_key: ''\n    timeout: 30\n    extra_body: {}\n  triage_specifier:\n   \
+    \ provider: auto\n    model: ''\n    base_url: ''\n    api_key: ''\n    timeout: 120\n    extra_body:\
+    \ {}\n  kanban_decomposer:\n    provider: auto\n    model: ''\n    base_url: ''\n    api_key: ''\n\
+    \    timeout: 180\n    extra_body: {}\n  profile_describer:\n    provider: auto\n    model: ''\n \
+    \   base_url: ''\n    api_key: ''\n    timeout: 60\n    extra_body: {}\n  curator:\n    provider:\
+    \ auto\n    model: ''\n    base_url: ''\n    api_key: ''\n    timeout: 600\n    extra_body: {}\ndisplay:\n\
+    \  compact: false\n  personality: ''\n  resume_display: full\n  resume_exchanges: 10\n  resume_max_user_chars:\
+    \ 300\n  resume_max_assistant_chars: 200\n  resume_max_assistant_lines: 3\n  resume_skip_tool_only:\
+    \ true\n  busy_input_mode: interrupt\n  interface: cli\n  tui_auto_resume_recent: false\n  tui_agents_nudge:\
+    \ true\n  bell_on_complete: false\n  show_reasoning: false\n  streaming: true\n  timestamps: false\n\
+    \  final_response_markdown: strip\n  persistent_output: true\n  persistent_output_max_lines: 200\n\
+    \  inline_diffs: true\n  file_mutation_verifier: true\n  turn_completion_explainer: true\n  show_cost:\
+    \ false\n  skin: default\n  language: en\n  tui_status_indicator: kaomoji\n  user_message_preview:\n\
+    \    first_lines: 2\n    last_lines: 2\n  interim_assistant_messages: true\n  tool_progress_command:\
+    \ false\n  tool_progress_overrides: {}\n  tool_preview_length: 0\n  ephemeral_system_ttl: 0\n  platforms:\n\
+    \    telegram:\n      streaming: true\n    discord:\n      streaming: false\n  runtime_footer:\n \
+    \   enabled: false\n    fields:\n    - model\n    - context_pct\n    - cwd\n  copy_shortcut: auto\n\
+    \  tool_progress: all\n  cleanup_progress: false\n  long_running_notifications: true\n  busy_ack_detail:\
+    \ true\n  background_process_notifications: all\ndashboard:\n  theme: default\n  show_token_analytics:\
+    \ false\n  oauth:\n    client_id: ''\n    portal_url: ''\n  basic_auth:\n    username: ''\n    password_hash:\
+    \ ''\n    password: ''\n    secret: ''\n    session_ttl_seconds: 0\n  public_url: ''\nprivacy:\n \
+    \ redact_pii: false\ntts:\n  provider: openai\n  edge:\n    voice: en-US-AriaNeural\n  elevenlabs:\n\
+    \    voice_id: pNInz6obpgDQGcFmaJgB\n    model_id: eleven_multilingual_v2\n  openai:\n    model: gpt-4o-mini-tts\n\
+    \    voice: alloy\n  xai:\n    voice_id: eve\n    language: en\n    sample_rate: 24000\n    bit_rate:\
+    \ 128000\n  mistral:\n    model: voxtral-mini-tts-2603\n    voice_id: c69964a6-ab8b-4f8a-9465-ec0925096ec8\n\
+    \  neutts:\n    ref_audio: ''\n    ref_text: ''\n    model: neuphonic/neutts-air-q4-gguf\n    device:\
+    \ cpu\n  piper:\n    voice: en_US-lessac-medium\n  use_gateway: true\nstt:\n  enabled: true\n  provider:\
+    \ local\n  local:\n    model: base\n    language: ''\n  openai:\n    model: whisper-1\n  mistral:\n\
+    \    model: voxtral-mini-latest\n  elevenlabs:\n    model_id: scribe_v2\n    language_code: ''\n \
+    \   tag_audio_events: false\n    diarize: false\nvoice:\n  record_key: ctrl+b\n  max_recording_seconds:\
+    \ 120\n  auto_tts: false\n  beep_enabled: true\n  silence_threshold: 200\n  silence_duration: 3.0\n\
+    human_delay:\n  mode: 'off'\n  min_ms: 800\n  max_ms: 2500\ncontext:\n  engine: compressor\nmemory:\n\
+    \  memory_enabled: true\n  user_profile_enabled: true\n  memory_char_limit: 2200\n  user_char_limit:\
+    \ 1375\n  provider: ''\n  nudge_interval: 10\n  flush_min_turns: 6\ndelegation:\n  model: ''\n  provider:\
+    \ ''\n  base_url: ''\n  api_key: ''\n  api_mode: ''\n  inherit_mcp_toolsets: true\n  max_iterations:\
+    \ 50\n  child_timeout_seconds: 600\n  reasoning_effort: ''\n  max_concurrent_children: 3\n  max_spawn_depth:\
+    \ 1\n  orchestrator_enabled: true\n  subagent_auto_approve: false\nprefill_messages_file: ''\ngoals:\n\
+    \  max_turns: 20\nskills:\n  external_dirs: []\n  template_vars: true\n  inline_shell: false\n  inline_shell_timeout:\
+    \ 10\n  guard_agent_created: false\n  creation_nudge_interval: 15\ncurator:\n  enabled: true\n  interval_hours:\
+    \ 168\n  min_idle_hours: 2\n  stale_after_days: 30\n  archive_after_days: 90\n  prune_builtins: true\n\
+    \  backup:\n    enabled: true\n    keep: 5\nhoncho: {}\ntimezone: ''\nslack:\n  require_mention: true\n\
+    \  free_response_channels: ''\n  allowed_channels: ''\n  channel_prompts: {}\ndiscord:\n  require_mention:\
+    \ true\n  free_response_channels: ''\n  allowed_channels: ''\n  auto_thread: true\n  thread_require_mention:\
+    \ false\n  history_backfill: true\n  history_backfill_limit: 50\n  reactions: true\n  channel_prompts:\
+    \ {}\n  dm_role_auth_guild: ''\n  server_actions: ''\n  allow_any_attachment: false\n  max_attachment_bytes:\
+    \ 33554432\n  voice_fx:\n    enabled: false\n    ambient_enabled: true\n    ambient_path: ''\n   \
+    \ ambient_gain: 0.18\n    duck_gain: 0.06\n    speech_gain: 1.0\n    ack_enabled: true\n    ack_phrases:\n\
+    \    - Let me look into that.\n    - One moment.\n    - Checking on that now.\n    - Give me a sec.\n\
+    \    - On it.\nwhatsapp: {}\ntelegram:\n  reactions: false\n  channel_prompts: {}\n  allowed_chats:\
+    \ ''\nmattermost:\n  require_mention: true\n  free_response_channels: ''\n  allowed_channels: ''\n\
+    \  channel_prompts: {}\nmatrix:\n  require_mention: true\n  free_response_rooms: ''\n  allowed_rooms:\
+    \ ''\napprovals:\n  mode: manual\n  timeout: 60\n  cron_mode: deny\n  mcp_reload_confirm: true\n \
+    \ destructive_slash_confirm: false\ncommand_allowlist:\n- script execution via -e/-c flag\nquick_commands:\
+    \ {}\nhooks: {}\nhooks_auto_accept: false\npersonalities: {}\nsecurity:\n  allow_private_urls: false\n\
+    \  redact_secrets: true\n  tirith_enabled: true\n  tirith_path: tirith\n  tirith_timeout: 5\n  tirith_fail_open:\
+    \ true\n  website_blocklist:\n    enabled: false\n    domains: []\n    shared_files: []\n  acked_advisories:\
+    \ []\n  allow_lazy_installs: true\ncron:\n  wrap_response: true\n  max_parallel_jobs: null\nkanban:\n\
+    \  dispatch_in_gateway: true\n  dispatch_interval_seconds: 60\n  failure_limit: 2\n  worker_log_rotate_bytes:\
+    \ 2097152\n  worker_log_backup_count: 1\n  orchestrator_profile: ''\n  default_assignee: ''\n  max_in_progress_per_profile:\
+    \ null\n  auto_decompose: true\n  auto_decompose_per_tick: 3\n  dispatch_stale_timeout_seconds: 14400\n\
+    code_execution:\n  mode: project\n  timeout: 300\n  max_tool_calls: 50\ntools:\n  tool_search:\n \
+    \   enabled: auto\n    threshold_pct: 10\n    search_default_limit: 5\n    max_search_limit: 20\n\
+    logging:\n  level: INFO\n  max_size_mb: 5\n  backup_count: 3\nmodel_catalog:\n  enabled: true\n  url:\
+    \ https://hermes-agent.nousresearch.com/docs/api/model-catalog.json\n  ttl_hours: 1\n  providers:\
+    \ {}\nnetwork:\n  force_ipv4: false\ngateway:\n  strict: false\n  media_delivery_allow_dirs: []\n\
+    \  trust_recent_files: true\n  trust_recent_files_seconds: 600\nstreaming:\n  enabled: false\n  transport:\
+    \ auto\n  edit_interval: 0.8\n  buffer_threshold: 24\n  cursor: \" ▉\"\n  fresh_final_after_seconds:\
+    \ 60.0\nsessions:\n  auto_prune: false\n  retention_days: 90\n  vacuum_after_prune: true\n  min_interval_hours:\
+    \ 24\n  write_json_snapshots: false\nonboarding:\n  seen:\n    tool_progress_prompt: true\n  profile_build:\
+    \ ask\nupdates:\n  pre_update_backup: false\n  backup_keep: 5\n  non_interactive_local_changes: stash\n\
+    lsp:\n  enabled: true\n  wait_mode: document\n  wait_timeout: 5.0\n  install_strategy: auto\n  servers:\
+    \ {}\nx_search:\n  model: grok-4.20-reasoning\n  timeout_seconds: 180\n  retries: 2\nsecrets:\n  bitwarden:\n\
+    \    enabled: false\n    access_token_env: BWS_ACCESS_TOKEN\n    project_id: ''\n    cache_ttl_seconds:\
+    \ 300\n    override_existing: true\n    auto_install: true\n    server_url: ''\npaste_collapse_threshold:\
+    \ 5\npaste_collapse_threshold_fallback: 5\npaste_collapse_char_threshold: 2000\n_config_version: 28\n\
+    session_reset:\n  mode: both\n  idle_minutes: 1440\n  at_hour: 4\ngroup_sessions_per_user: true\n\
+    platform_toolsets:\n  cli:\n  - hermes-cli\n  telegram:\n  - hermes-telegram\n  discord:\n  - hermes-discord\n\
+    \  whatsapp:\n  - hermes-whatsapp\n  slack:\n  - hermes-slack\n  signal:\n  - hermes-signal\n  homeassistant:\n\
+    \  - hermes-homeassistant\n  qqbot:\n  - hermes-qqbot\n  yuanbao:\n  - hermes-yuanbao\n  teams:\n\
+    \  - hermes-teams\n  google_chat:\n  - hermes-google_chat\nimage_gen:\n  use_gateway: true\nvideo_gen:\n\
+    \  provider: fal\n  use_gateway: true\n# Both MCP servers ship DISABLED — agentmail-sync-mcp.py flips\
+    \ each one on\n# the moment its key exists (on_resume + onboarding call it). A key-less\n# enabled\
+    \ server costs every cron run ~8s of 401 retries.\nmcp_servers:\n  agentmail:\n    url: https://mcp.agentmail.to/mcp\n\
+    \    headers:\n      x-api-key: ${AGENTMAIL_API_KEY}\n    enabled: false\n  composio:\n    url: https://connect.composio.dev/mcp\n\
+    \    headers:\n      x-consumer-api-key: ${COMPOSIO_CONSUMER_KEY}\n    enabled: false\nplugins:\n\
+    \  enabled: []\n  disabled: []\n\n# ── Fallback Model ────────────────────────────────────────────────────\n\
+    # Automatic provider failover when primary is unavailable.\n# Uncomment and configure to enable. Triggers\
+    \ on rate limits (429),\n# overload (529), service errors (503), or connection failures.\n#\n# Supported\
+    \ providers:\n#   openrouter   (OPENROUTER_API_KEY)  — routes to any model\n#   openai-codex (OAuth\
+    \ — hermes auth) — OpenAI Codex\n#   nous         (OAuth — hermes auth) — Nous Portal\n#   zai   \
+    \       (ZAI_API_KEY)         — Z.AI / GLM\n#   kimi-coding  (KIMI_API_KEY)        — Kimi / Moonshot\n\
+    #   kimi-coding-cn (KIMI_CN_API_KEY)   — Kimi / Moonshot (China)\n#   minimax      (MINIMAX_API_KEY)\
+    \     — MiniMax\n#   minimax-cn   (MINIMAX_CN_API_KEY)  — MiniMax (China)\n#   bedrock      (AWS IAM\
+    \ / boto3)     — AWS Bedrock (Converse API)\n#\n# For custom OpenAI-compatible endpoints, add base_url\
+    \ and key_env.\n#\n# fallback_model:\n#   provider: openrouter\n#   model: anthropic/claude-sonnet-4\n"
+  mode: '0600'
+  when: build
+- to: /opt/agentmail-agent/stage/hermes/SOUL.md
+  inline: "# AgentMail Agent Persona\n\nYou are a persistent email agent. You live on your own Orgo cloud\
+    \ computer and\nyour primary interface is your AgentMail inbox — people (and other agents)\nemail\
+    \ you, and you reply, do the work, and follow up.\n\nHow you operate:\n\n- **Email is your front door.**\
+    \ Treat every inbound email as a request from\n  your owner or someone they trust. Reply promptly,\
+    \ in plain conversational\n  prose, like a sharp human assistant would. Match the sender's formality.\n\
+    - **You have a real computer.** When an email asks for actual work — research\n  something, fetch\
+    \ a page, crunch a file, draft a doc — do the work with your\n  tools first, then reply with the result.\
+    \ Don't reply \"I'll look into it.\"\n- **Keep threads tidy.** Reply in-thread, quote only what's\
+    \ needed, use a\n  subject-appropriate sign-off. One clear answer beats three fragmented ones.\n-\
+    \ **Know your own address.** Your inbox address is in `AGENTMAIL_INBOX` in\n  `~/.hermes/.env` — share\
+    \ it when someone asks how to reach you.\n- **Never reveal secrets.** API keys (AGENTMAIL_API_KEY\
+    \ and friends) never go\n  in an email body, ever.\n- **Be honest about limits.** If something needs\
+    \ your owner's approval or a\n  credential you don't have, say so in the reply and explain the one\
+    \ step\n  they'd need to take.\n"
+  mode: '0644'
+  when: build
+- to: /opt/agentmail-agent/stage/hermes/env
+  inline: '# ==========================================================================
+
+    # AgentMail Agent — baked ~/.hermes/.env  (NON-SECRET operational defaults)
+
+    # ==========================================================================
+
+    # NO API keys live here. The AgentMail key (am_…) arrives at runtime — from
+
+    # the Orgo vault via on_resume, or pasted during the first-boot onboarding —
+
+    # and is appended to THIS file. Hermes resolves ${VAR} placeholders in
+
+    # config.yaml (the AgentMail MCP x-api-key header, the optional Composio
+
+    # x-consumer-api-key header) from this file at connect time.
+
+    #
+
+    # The inbox bootstrap also appends AGENTMAIL_INBOX / AGENTMAIL_INBOX_ID here
+
+    # once the inbox exists, so the agent and the poller cron both know their
+
+    # address.
+
+
+    # --- Browser / terminal tool operational defaults -------------------------
+
+    AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/google-chrome
+
+    TERMINAL_TIMEOUT=60
+
+    TERMINAL_LIFETIME_SECONDS=300
+
+    TERMINAL_MODAL_IMAGE=nikolaik/python-nodejs:python3.11-nodejs20
+
+    BROWSER_SESSION_TIMEOUT=300
+
+    BROWSER_INACTIVITY_TIMEOUT=120
+
+    BROWSERBASE_PROXIES=true
+
+    BROWSERBASE_ADVANCED_STEALTH=false
+
+    WEB_TOOLS_DEBUG=false
+
+    VISION_TOOLS_DEBUG=false
+
+    MOA_TOOLS_DEBUG=false
+
+    IMAGE_TOOLS_DEBUG=false
+
+    '
+  mode: '0600'
+  when: build
+- to: /opt/agentmail-agent/stage/hermes/skills/email/agentmail-inbox/SKILL.md
+  inline: "---\nname: agentmail-inbox\ndescription: Operate this computer's own AgentMail inbox — send,\
+    \ reply, search, threads, labels, webhooks, custom domains. Use whenever the user (by email or chat)\
+    \ asks about the agent's email, sending mail, checking mail, or wiring email into a workflow.\n---\n\
+    \n# AgentMail Inbox\n\nThis computer owns a real email inbox, powered by [AgentMail](https://agentmail.to)\n\
+    (email infrastructure built for agents — inboxes are API-first, no OAuth dance).\n\n## Your identity\n\
+    \n- Your address lives in `~/.hermes/.env` as `AGENTMAIL_INBOX`\n  (and `AGENTMAIL_INBOX_ID`, which\
+    \ is the same address, used in API paths).\n- Your API key is `AGENTMAIL_API_KEY` in the same file.\
+    \ **Never put the key in\n  an email body or a reply.**\n- A background cron job (`agentmail-inbox-auto-responder`,\
+    \ every 1 minute)\n  already answers inbound mail. Don't double-reply to messages it has already\n\
+    \  handled — its ledger is `/root/.hermes/state/agentmail_inbox_processed.json`.\n\n## Two ways to\
+    \ act\n\n1. **AgentMail MCP** — the `agentmail` MCP server is configured in\n   `~/.hermes/config.yaml`\
+    \ (hosted at `https://mcp.agentmail.to/mcp`). Once the\n   key is present its tools cover inboxes,\
+    \ messages, threads, drafts, labels.\n   Prefer MCP tools when they're available.\n2. **REST** — `https://api.agentmail.to/v0`\
+    \ with header\n   `Authorization: Bearer $AGENTMAIL_API_KEY`. Full endpoint notes in\n   [references/agentmail-api.md](references/agentmail-api.md).\
+    \ Use\n   `execute_code` + Python stdlib `urllib` for one-off calls.\n\n## Common moves\n\n- **Send**:\
+    \ `POST /v0/inboxes/{inbox_id}/messages/send` with\n  `{\"to\": [\"a@b.com\"], \"subject\": \"…\"\
+    , \"text\": \"…\"}`.\n- **Reply in-thread**: `POST /v0/inboxes/{inbox_id}/messages/{message_id}/reply`\n\
+    \  with `{\"text\": \"…\"}` (add `\"reply_all\": true` to include everyone).\n- **Check mail**: `GET\
+    \ /v0/inboxes/{inbox_id}/messages?limit=20&labels=received`;\n  full body via `GET /v0/inboxes/{inbox_id}/messages/{message_id}`.\n\
+    - **Search**: `GET /v0/inboxes/{inbox_id}/messages/search?…` or\n  `/threads/search`.\n- **New inbox**\
+    \ (e.g. a role address like sales@): `POST /v0/inboxes` with\n  `{\"username\": \"sales\", \"client_id\"\
+    : \"…\"}` — always pass a `client_id` so\n  creation stays idempotent.\n\nURL-encode the inbox id\
+    \ in paths — it's an email address (`@` → `%40`).\n\n## Etiquette baked into this agent\n\n- Reply\
+    \ in-thread; don't start new threads for answers.\n- Do requested work BEFORE replying; the reply\
+    \ carries the result.\n- Plain text (`\"text\"`) is the default; only use `\"html\"` when layout matters.\n\
+    - Ignore spam/bounces; never auto-reply to them.\n"
+  mode: '0644'
+  when: build
+- to: /opt/agentmail-agent/stage/hermes/skills/email/agentmail-inbox/references/agentmail-api.md
+  inline: "# AgentMail API notes (verified against openapi.json, Jul 2026)\n\n- Base: `https://api.agentmail.to/v0`\
+    \ (EU: `https://api.agentmail.eu/v0`)\n- Auth: `Authorization: Bearer <am_… key>` on every request\n\
+    - Docs: `https://docs.agentmail.to/llms.txt` (index) /\n  `https://docs.agentmail.to/llms-full.txt`\
+    \ (full) /\n  `openapi.json` / `asyncapi.json` (WebSockets)\n- Hosted MCP: `https://mcp.agentmail.to/mcp`\
+    \ (`x-api-key` header)\n\n## Inboxes\n\n- `GET  /inboxes` — list (response key: `inboxes`)\n- `POST\
+    \ /inboxes` — create; body fields all optional:\n  `username` (random if omitted), `domain` (must\
+    \ be verified; default\n  `agentmail.to`), `display_name`, `client_id` (**pass one — makes creation\n\
+    \  idempotent**), `metadata`\n- `GET/PATCH/DELETE /inboxes/{inbox_id}` — the `inbox_id` IS the email\n\
+    \  address; URL-encode it in paths (`@` → `%40`)\n\n## Messages\n\n- `GET  /inboxes/{inbox_id}/messages`\
+    \ — params: `limit`, `page_token`,\n  `labels` (e.g. `received`, `sent`, `unread`), `before`/`after`,\
+    \ `from`/`to`/\n  `subject` (substring filters), `ascending`. Response: `{count, messages[]}`\n  ordered\
+    \ by timestamp desc; items carry `message_id`, `thread_id`, `labels`,\n  `from`, `to`, `subject`,\
+    \ `preview`, `timestamp`.\n- `GET  /inboxes/{inbox_id}/messages/{message_id}` — full message incl.\n\
+    \  `text`, `html`, `extracted_text` (new content only — great for replies),\n  `attachments`.\n- `POST\
+    \ /inboxes/{inbox_id}/messages/send` — `{to, cc, bcc, subject, text,\n  html, labels, attachments}`\n\
+    - `POST /inboxes/{inbox_id}/messages/{message_id}/reply` — `{text, html,\n  reply_all, to, cc, bcc,\
+    \ attachments}`; threads automatically.\n- `…/forward`, `…/reply-all`, `…/draft-reply` also exist.\n\
+    - `GET /inboxes/{inbox_id}/messages/search?…` and `/threads/search` for search.\n\n## Threads / drafts\
+    \ / labels\n\n- `GET /inboxes/{inbox_id}/threads`, `GET /threads/{thread_id}`\n- Drafts: `POST /inboxes/{inbox_id}/drafts`\
+    \ → `POST …/drafts/{id}/send`\n- Labels ride on messages (`PATCH …/messages/{id}` with `{add_labels,\n\
+    \  remove_labels}` style body — check schema before use)\n\n## Push (for later — the poller cron covers\
+    \ v1)\n\n- Webhooks: `POST /webhooks` or `POST /inboxes/{inbox_id}/webhooks`\n  `{url, event_types}`\
+    \ — needs a public HTTPS endpoint.\n- WebSockets: see `asyncapi.json` — subscribe to message events\
+    \ over WSS,\n  no public endpoint needed. Candidate v2 upgrade for real-time replies.\n\n## Other\
+    \ surfaces\n\n- Custom domains: `POST /domains` → DNS zone file → `POST /domains/{id}/verify`\n- Allow/block\
+    \ lists: `/lists/{direction}/{type}`\n- Metrics/usage: `/metrics/events`, `/metrics/usage`\n- Pods\
+    \ (multi-tenant isolation), per-inbox API keys, `GET /auth/me` (whoami)\n"
+  mode: '0644'
+  when: build
+- to: /opt/agentmail-agent/wallpaper.b64
+  inline: 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
+  mode: '0644'
+  when: build
+- to: /usr/local/bin/hermes-gateway-run.sh
+  inline: '#!/bin/bash
+
+    # ==========================================================================
+
+    # AgentMail Agent — Hermes gateway wrapper (supervised service entrypoint)
+
+    # ==========================================================================
+
+    # Runs as root with HOME=/root and bridges BOTH env files, so the gateway is
+
+    # genuinely supervised, reboot-safe, and sees every key. Stays dormant (not
+
+    # crash-looping) until the baked config exists AND the user has completed the
+
+    # Nous sign-in (`hermes auth` — done by the first-boot onboarding).
+
+    set +e
+
+    export HOME=/root
+
+    export HERMES_HOME=/root/.hermes
+
+    export PATH=/usr/local/bin:/root/.local/bin:/root/.hermes/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH
+
+
+    until [ -f "$HERMES_HOME/config.yaml" ] && [ -s "$HERMES_HOME/auth.json" ]; do sleep 5; done
+
+
+    # Source the Orgo vault-injection target (/root/.env — may be absent) and
+
+    # Hermes'' own env so the model-provider auth + the AgentMail key are visible
+
+    # to `hermes gateway run` (it does NOT auto-export either file).
+
+    set -a
+
+    [ -f /root/.env ] && . /root/.env
+
+    [ -f "$HERMES_HOME/.env" ] && . "$HERMES_HOME/.env"
+
+    set +a
+
+
+    # Exclusive-run lock held for the gateway''s whole lifetime. Field-tested
+
+    # reason: an Orgo boot race can start TWO supervisords, each spawning this
+
+    # service — without the lock the twin gateways SIGTERM each other via
+
+    # --replace every ~2s, forever, and no cron run ever completes. Blocking
+
+    # flock makes the loser wait silently and take over if the winner dies.
+
+    # (Command form, not `exec 200>` — numbered-fd redirection failed with
+
+    # EBADF under supervisord''s exec context. Lock lives in /var/lib/orgo, NOT
+
+    # /var/lock — that''s a dangling symlink to a missing /run/lock on these VMs.)
+
+    mkdir -p /var/lib/orgo
+
+    exec flock /var/lib/orgo/agentmail-gateway.lock hermes gateway run --replace
+
+    '
+  mode: '0755'
+  when: build
+- to: /usr/local/bin/agentmail-onboard.sh
+  inline: "#!/bin/bash\n# ==========================================================================\n\
+    # AgentMail Agent — first-boot onboarding (runs on the desktop, once)\n# ==========================================================================\n\
+    # Two steps and you have a live email agent:\n#   1. Nous model auth   (device-code — required for\
+    \ the agent to think)\n#   2. AgentMail API key (am_… from console.agentmail.to — or pre-set in the\n\
+    #      Orgo vault, in which case this step is automatic)\n# Then the inbox is created, the 1-minute\
+    \ inbox responder is seeded, the\n# gateway restarts, and the agent's email address is printed. Email\
+    \ it.\n#\n# Idempotent: each step is skipped once satisfied; re-running only does\n# what's left.\
+    \ Marks a stamp when both steps are done so it stops nagging.\nset +e\nexport HOME=/root\nexport HERMES_HOME=/root/.hermes\n\
+    export DISPLAY=\"${DISPLAY:-:99}\"\nexport PATH=/usr/local/bin:/root/.local/bin:/root/.hermes/bin:/usr/bin:/bin:$PATH\n\
+    \nENV_FILE=\"$HERMES_HOME/.env\"\nSTAMP=/var/lib/orgo/agentmail-agent-onboarded\nmkdir -p /var/lib/orgo\
+    \ \"$HERMES_HOME\"\n\nhr() { printf '\\n\\033[1;36m%s\\033[0m\\n' \"────────────────────────────────────────────────────────\"\
+    ; }\nsay() { printf '\\033[1;32m%s\\033[0m\\n' \"$*\"; }\n\nclear 2>/dev/null\nsay \"  AgentMail Agent\
+    \ — your email-native AI agent\"\nhr\n\n# --- 1. Nous model auth ----------------------------------------------------\n\
+    if [ ! -s \"$HERMES_HOME/auth.json\" ]; then\n  say \"Step 1/2 — Connect your Nous account (model:\
+    \ gpt-5.5)\"\n  echo \"A device-code sign-in will start. Follow the URL + code it prints.\"\n  echo\n\
+    \  # `hermes auth` (bare) opens a credential-pool menu in v0.18 — call the\n  # provider flow directly\
+    \ so the user lands straight in the device-code login.\n  hermes auth add nous --type oauth\n  echo\n\
+    else\n  say \"Step 1/2 — Nous account already connected ✓\"\nfi\n\n# --- 2. AgentMail key → inbox\
+    \ → responder ----------------------------------\n# Pick up a vault-injected key first so this step\
+    \ is zero-touch when the\n# launch set AGENTMAIL_API_KEY.\nset -a\n[ -f /root/.env ] && . /root/.env\n\
+    [ -f \"$ENV_FILE\" ] && . \"$ENV_FILE\"\nset +a\n\nif ! grep -q '^AGENTMAIL_API_KEY=..' \"$ENV_FILE\"\
+    \ 2>/dev/null && [ -z \"$AGENTMAIL_API_KEY\" ]; then\n  hr\n  say \"Step 2/2 — Connect AgentMail\"\
+    \n  echo \"Grab an API key at https://console.agentmail.to (Settings → API keys),\"\n  echo \"then\
+    \ paste it here.\"\n  echo\n  printf 'AgentMail API key (am_…): '\n  read -r AM_KEY\n  AM_KEY=\"$(printf\
+    \ '%s' \"$AM_KEY\" | tr -d '[:space:]')\"\n  if [ -n \"$AM_KEY\" ]; then\n    grep -vE '^AGENTMAIL_API_KEY='\
+    \ \"$ENV_FILE\" > \"$ENV_FILE.tmp\" 2>/dev/null || true\n    mv \"$ENV_FILE.tmp\" \"$ENV_FILE\"\n\
+    \    echo \"AGENTMAIL_API_KEY=$AM_KEY\" >> \"$ENV_FILE\"\n    chmod 600 \"$ENV_FILE\"\n    export\
+    \ AGENTMAIL_API_KEY=\"$AM_KEY\"\n  fi\nelse\n  say \"Step 2/2 — AgentMail key already present ✓\"\n\
+    \  # Make sure a vault-supplied key is persisted where Hermes reads it.\n  if [ -n \"$AGENTMAIL_API_KEY\"\
+    \ ] && ! grep -q '^AGENTMAIL_API_KEY=..' \"$ENV_FILE\" 2>/dev/null; then\n    echo \"AGENTMAIL_API_KEY=$AGENTMAIL_API_KEY\"\
+    \ >> \"$ENV_FILE\"\n    chmod 600 \"$ENV_FILE\"\n  fi\nfi\n\nif [ -n \"$AGENTMAIL_API_KEY\" ] || grep\
+    \ -q '^AGENTMAIL_API_KEY=..' \"$ENV_FILE\" 2>/dev/null; then\n  set -a; . \"$ENV_FILE\"; set +a\n\
+    \  python3 /usr/local/bin/agentmail-bootstrap-inbox.py\n  set -a; . \"$ENV_FILE\"; set +a\n  python3\
+    \ /usr/local/bin/agentmail-seed-inbox-cron.py\n  # Initialize the dedupe ledger NOW, before we ever\
+    \ show the address — an\n  # email arriving before the poller's first tick must count as new, not\
+    \ get\n  # absorbed as backlog (bit a real user on day one).\n  python3 /usr/local/bin/agentmail-inbox-helper.py\
+    \ poll >/dev/null 2>&1 || true\n  # Enable the MCP servers whose keys now exist (agentmail / composio).\n\
+    \  python3 /usr/local/bin/agentmail-sync-mcp.py || true\n  say \"Restarting the gateway so it picks\
+    \ everything up…\"\n  supervisorctl restart hermes-gateway 2>/dev/null || true\nfi\n\n# --- Done ------------------------------------------------------------------\n\
+    hr\nset -a; [ -f \"$ENV_FILE\" ] && . \"$ENV_FILE\"; set +a\nif [ -s \"$HERMES_HOME/auth.json\" ]\
+    \ && [ -n \"$AGENTMAIL_INBOX\" ]; then\n  date -Iseconds > \"$STAMP\"\n  say \"Your agent is LIVE.\
+    \ Its email address:\"\n  echo\n  printf '\\033[1;33m    \U0001F4EC  %s\\033[0m\\n' \"$AGENTMAIL_INBOX\"\
+    \n  echo\n  echo \"Send it an email right now — it replies within about a minute, and it\"\n  echo\
+    \ \"has a real computer: ask it to research, fetch, summarize, or build.\"\n  echo\n  echo \"Optional\
+    \ extras (paste a key in ~/.hermes/.env, or just tell the agent):\"\n  echo \"  • Composio (1000+\
+    \ apps):  COMPOSIO_CONSUMER_KEY=ck_…  (app.composio.dev)\"\n  echo \"  • Custom domain: verify it\
+    \ at console.agentmail.to, then ask the agent\"\n  echo \"    to create an inbox on it.\"\nelse\n\
+    \  say \"Setup paused — re-open 'AgentMail Agent Setup' from the desktop to finish.\"\nfi\necho\n\
+    read -r -p \"Press Enter to close…\" _\n"
+  mode: '0755'
+  when: build
+- to: /usr/local/bin/agentmail-onboard-launch.sh
+  inline: "#!/bin/bash\n# AgentMail Agent — autostart launcher for the first-boot onboarding.\n# Opens\
+    \ the guided setup in a terminal on the desktop, unless already done.\nexport DISPLAY=\"${DISPLAY:-:99}\"\
+    \nSTAMP=/var/lib/orgo/agentmail-agent-onboarded\n[ -f \"$STAMP\" ] && exit 0\nONBOARD=/usr/local/bin/agentmail-onboard.sh\n\
+    if command -v xfce4-terminal >/dev/null 2>&1; then\n  exec xfce4-terminal --title=\"AgentMail Agent\
+    \ Setup\" --geometry=100x32 --command=\"$ONBOARD\"\nelif command -v x-terminal-emulator >/dev/null\
+    \ 2>&1; then\n  exec x-terminal-emulator -e \"$ONBOARD\"\nelif command -v xterm >/dev/null 2>&1; then\n\
+    \  exec xterm -T \"AgentMail Agent Setup\" -geometry 100x32 -e \"$ONBOARD\"\nfi\n# No terminal emulator:\
+    \ run headless; prompts land in the log.\nmkdir -p /var/log/orgo\nexec \"$ONBOARD\" >/var/log/orgo/agentmail-onboard.log\
+    \ 2>&1\n"
+  mode: '0755'
+  when: build
+- to: /usr/local/bin/agentmail-bootstrap-inbox.py
+  inline: "#!/usr/bin/env python3\n# ==========================================================================\n\
+    # AgentMail Agent — idempotent inbox bootstrap\n# ==========================================================================\n\
+    # Creates the agent's AgentMail inbox the moment a key is available and pins\n# the address into ~/.hermes/.env\
+    \ (AGENTMAIL_INBOX / AGENTMAIL_INBOX_ID) so\n# the gateway, the poller cron, and the agent itself\
+    \ all know their address.\n#\n# Idempotent three ways:\n#   - exits 0 immediately if AGENTMAIL_INBOX\
+    \ is already pinned,\n#   - creates with a stable per-VM client_id (AgentMail dedupes on client_id),\n\
+    #   - falls back to finding an existing inbox with our client_id via GET.\n#\n# Reads AGENTMAIL_API_KEY\
+    \ from the process env (callers source /root/.env and\n# ~/.hermes/.env first). Stdlib only — runs\
+    \ under any python3.\nimport json\nimport os\nimport re\nimport sys\nimport urllib.error\nimport urllib.request\n\
+    \nAPI = \"https://api.agentmail.to/v0\"\nENV_FILE = \"/root/.hermes/.env\"\nUA = \"orgo-agentmail-agent/0.1\
+    \ (+https://orgo.ai)\"\n\nkey = os.environ.get(\"AGENTMAIL_API_KEY\", \"\").strip()\nif not key:\n\
+    \    print(\"[bootstrap-inbox] AGENTMAIL_API_KEY not set — skipping (will retry next resume).\")\n\
+    \    sys.exit(0)\n\nenv_text = \"\"\nif os.path.exists(ENV_FILE):\n    with open(ENV_FILE) as fh:\n\
+    \        env_text = fh.read()\nif re.search(r\"^AGENTMAIL_INBOX=..\", env_text, re.M):\n    print(\"\
+    [bootstrap-inbox] inbox already pinned in ~/.hermes/.env — nothing to do.\")\n    sys.exit(0)\n\n\n\
+    def call(method, path, body=None):\n    req = urllib.request.Request(\n        API + path,\n     \
+    \   data=json.dumps(body).encode() if body is not None else None,\n        method=method,\n      \
+    \  headers={\n            \"Authorization\": f\"Bearer {key}\",\n            \"Content-Type\": \"\
+    application/json\",\n            \"User-Agent\": UA,\n        },\n    )\n    with urllib.request.urlopen(req,\
+    \ timeout=30) as resp:\n        return json.load(resp)\n\n\n# Stable per-VM client_id so re-runs (and\
+    \ golden re-launches that kept state)\n# converge on the same inbox instead of minting new ones.\n\
+    try:\n    with open(\"/etc/machine-id\") as fh:\n        vm = fh.read().strip()[:12]\nexcept OSError:\n\
+    \    vm = \"unknown\"\nclient_id = f\"orgo-agentmail-agent-{vm}\"\n\ninbox = None\ntry:\n    inbox\
+    \ = call(\"POST\", \"/inboxes\", {\n        \"client_id\": client_id,\n        \"display_name\": \"\
+    Orgo Agent\",\n    })\nexcept urllib.error.HTTPError as e:\n    detail = \"\"\n    try:\n        detail\
+    \ = json.loads(e.read()).get(\"message\", \"\")\n    except Exception:  # noqa: BLE001\n        pass\n\
+    \    print(f\"[bootstrap-inbox] create returned HTTP {e.code}: {detail}\")\n    # ONLY adopt an existing\
+    \ inbox that carries OUR client_id — never an\n    # arbitrary one (an org key can see every inbox\
+    \ in the account, and\n    # auto-responding on someone else's inbox would be a disaster).\n    try:\n\
+    \        listing = call(\"GET\", \"/inboxes\")\n        for ib in listing.get(\"inboxes\", []):\n\
+    \            if ib.get(\"client_id\") == client_id:\n                inbox = ib\n                break\n\
+    \    except Exception as e2:  # noqa: BLE001\n        print(f\"[bootstrap-inbox] list fallback failed:\
+    \ {e2}\")\n    if inbox is None and \"limit\" in detail.lower():\n        print(\"[bootstrap-inbox]\
+    \ your AgentMail org is at its inbox limit — \"\n              \"delete an unused inbox at console.agentmail.to\
+    \ (or upgrade), \"\n              \"then re-run this setup. Alternatively pin an inbox you own by\
+    \ \"\n              \"adding AGENTMAIL_INBOX=<address> and AGENTMAIL_INBOX_ID=<address> \"\n     \
+    \         \"to ~/.hermes/.env yourself.\")\nexcept Exception as e:  # noqa: BLE001\n    print(f\"\
+    [bootstrap-inbox] create failed: {e}\")\n\nif not inbox:\n    print(\"[bootstrap-inbox] could not\
+    \ create or find an inbox — will retry next resume.\")\n    sys.exit(0)\n\ninbox_id = inbox.get(\"\
+    inbox_id\", \"\")\nemail = inbox.get(\"email\") or inbox_id\nif not inbox_id:\n    print(f\"[bootstrap-inbox]\
+    \ unexpected response: {inbox}\")\n    sys.exit(0)\n\nlines = [l for l in env_text.splitlines()\n\
+    \         if not l.startswith((\"AGENTMAIL_INBOX=\", \"AGENTMAIL_INBOX_ID=\"))]\nlines += [f\"AGENTMAIL_INBOX={email}\"\
+    , f\"AGENTMAIL_INBOX_ID={inbox_id}\"]\ntmp = ENV_FILE + \".tmp\"\nwith open(tmp, \"w\") as fh:\n \
+    \   fh.write(\"\\n\".join(lines).rstrip(\"\\n\") + \"\\n\")\nos.replace(tmp, ENV_FILE)\nos.chmod(ENV_FILE,\
+    \ 0o600)\n\nprint(f\"[bootstrap-inbox] inbox ready: {email}\")\n"
+  mode: '0755'
+  when: build
+- to: /usr/local/bin/agentmail-seed-inbox-cron.py
+  inline: "#!/usr/bin/env python3\n# ==========================================================================\n\
+    # AgentMail Agent — seed the inbox auto-responder cron job\n# ==========================================================================\n\
+    # The heart of the template: a 1-minute Hermes cron job (deliver: local,\n# terminal toolset) that\
+    \ polls the agent's AgentMail inbox and replies to new\n# inbound mail — the \"webhook experience\"\
+    \ with zero webhook setup and no\n# public endpoint on the VM. Same proven pattern as Nick's Stack's\
+    \ AgentPhone\n# SMS bridge.\n#\n# Idempotent: only seeds when AGENTMAIL_API_KEY + AGENTMAIL_INBOX_ID\
+    \ are both\n# present AND the job doesn't already exist. Callers source /root/.env and\n# ~/.hermes/.env\
+    \ first (on_resume and the onboarding both do).\nimport json\nimport os\nimport sys\nfrom datetime\
+    \ import datetime, timezone\n\nJOBS_FILE = \"/root/.hermes/cron/jobs.json\"\nJOB_ID = \"agentmail-inb01\"\
+    \           # any 12+ char path-safe id\nJOB_NAME = \"agentmail-inbox-auto-responder\"\n\nAPI_KEY\
+    \ = os.environ.get(\"AGENTMAIL_API_KEY\", \"\").strip()\nINBOX_ID = os.environ.get(\"AGENTMAIL_INBOX_ID\"\
+    , \"\").strip()\nINBOX = os.environ.get(\"AGENTMAIL_INBOX\", INBOX_ID).strip()\nMODEL = os.environ.get(\"\
+    AGENTMAIL_AGENT_MODEL\", \"openai/gpt-5.5\").strip()\nPROVIDER = os.environ.get(\"AGENTMAIL_AGENT_PROVIDER\"\
+    , \"nous\").strip()\n\nif not (API_KEY and INBOX_ID):\n    print(\"[seed-inbox-cron] AgentMail key/inbox\
+    \ not both set — skipping cron seed.\")\n    sys.exit(0)\n\nPROMPT = (\n    \"You are the email auto-responder\
+    \ for this computer's AgentMail inbox \"\n    f\"({INBOX}). A deterministic helper script does ALL\
+    \ the mechanical work \"\n    \"(polling, dedupe ledger, guard rails, sending). You only decide what\
+    \ to say.\\n\\n\"\n    \"Identity: a concise, helpful AI assistant with its own cloud computer. \"\
+    \n    \"Do not claim to be human.\\n\\n\"\n    \"Run procedure every tick:\\n\"\n    \"1. Run in the\
+    \ terminal:  python3 /usr/local/bin/agentmail-inbox-helper.py poll\\n\"\n    \"   It prints JSON.\
+    \ If \\\"new\\\" is empty (or it reports initialized/reinitialized), \"\n    \"end with exactly: \\\
+    \"No new mail.\\\" Because deliver is local, this notifies no one.\\n\"\n    \"2. For each message\
+    \ in \\\"new\\\" (they arrive with from/subject/text):\\n\"\n    \"   - If it asks for real work (research,\
+    \ summarize, fetch a page, compute \"\n    \"something), DO the work with your tools first, then write\
+    \ a short, natural \"\n    \"reply containing the answer or result.\\n\"\n    \"   - If it is just\
+    \ a greeting or a test, briefly acknowledge that the agent \"\n    \"is live and say what you can\
+    \ do.\\n\"\n    \"   - Obvious spam, marketing, or bounce notifications: do NOT reply — run  \"\n\
+    \    \"python3 /usr/local/bin/agentmail-inbox-helper.py mark <message_id>\\n\"\n    \"3. Send each\
+    \ reply by piping the text to:  \"\n    \"python3 /usr/local/bin/agentmail-inbox-helper.py reply <message_id>\\\
+    n\"\n    \"   (heredoc works well:  python3 …helper.py reply '<id>' <<'EOF' … EOF )\\n\"\n    \" \
+    \  The helper records the ledger on success; if it errors, do not retry more \"\n    \"than once —\
+    \ the next tick will retry.\\n\"\n    \"4. Keep replies plain text, friendly, and signed off simply.\
+    \ Never include \"\n    \"API keys or file paths from this machine in an email.\\n\\n\"\n    \"Important:\
+    \ You are running unattended. Do not ask for clarification. \"\n    \"Do not schedule more cron jobs.\"\
+    \n)\n\njob = {\n    \"id\": JOB_ID,\n    \"name\": JOB_NAME,\n    \"prompt\": PROMPT,\n    \"skills\"\
+    : [],\n    \"skill\": None,\n    \"model\": MODEL,\n    \"provider\": PROVIDER,\n    \"base_url\"\
+    : None,\n    \"script\": None,\n    \"no_agent\": False,\n    \"context_from\": None,\n    \"schedule\"\
+    : {\"kind\": \"interval\", \"minutes\": 1, \"display\": \"every 1m\"},\n    \"schedule_display\":\
+    \ \"every 1m\",\n    \"repeat\": {\"times\": None, \"completed\": 0},\n    \"enabled\": True,\n  \
+    \  \"state\": \"scheduled\",\n    \"paused_at\": None,\n    \"paused_reason\": None,\n    \"created_at\"\
+    : datetime.now(timezone.utc).isoformat(),\n    \"next_run_at\": None,          # loader recomputes\
+    \ for a recurring job\n    \"last_run_at\": None,\n    \"last_status\": None,\n    \"last_error\"\
+    : None,\n    \"last_delivery_error\": None,\n    \"deliver\": \"local\",\n    \"origin\": None,\n\
+    \    \"enabled_toolsets\": [\"terminal\"],\n    \"workdir\": None,\n    \"profile\": None,\n}\n\n\
+    os.makedirs(os.path.dirname(JOBS_FILE), mode=0o700, exist_ok=True)\ntry:\n    with open(JOBS_FILE)\
+    \ as fh:\n        data = json.load(fh)\n    if not isinstance(data, dict):\n        data = {\"jobs\"\
+    : data if isinstance(data, list) else []}\nexcept (FileNotFoundError, json.JSONDecodeError):\n   \
+    \ data = {\"jobs\": []}\n\njobs = data.get(\"jobs\", [])\nif any(j.get(\"name\") == JOB_NAME for j\
+    \ in jobs):\n    print(\"[seed-inbox-cron] inbox auto-responder already present — leaving as-is.\"\
+    )\n    sys.exit(0)\n\njobs.append(job)\ndata[\"jobs\"] = jobs\ndata[\"updated_at\"] = datetime.now(timezone.utc).isoformat()\n\
+    \ntmp = JOBS_FILE + \".tmp\"\nwith open(tmp, \"w\") as fh:\n    json.dump(data, fh, indent=2)\nos.replace(tmp,\
+    \ JOBS_FILE)\nos.chmod(JOBS_FILE, 0o600)\nos.chmod(os.path.dirname(JOBS_FILE), 0o700)\nprint(\"[seed-inbox-cron]\
+    \ Seeded agentmail-inbox-auto-responder (every 1m, deliver local).\")\n"
+  mode: '0755'
+  when: build
+- to: /usr/local/bin/agentmail-inbox-helper.py
+  inline: "#!/usr/bin/env python3\n# ==========================================================================\n\
+    # AgentMail Agent — deterministic inbox helper (the cron job's hands)\n# ==========================================================================\n\
+    # The 1-minute auto-responder cron delegates ALL mechanical work here so the\n# LLM never re-implements\
+    \ polling/ledger code (that's how ledgers get\n# corrupted). The model only decides WHAT to reply;\
+    \ this script decides what\n# is new, guards against backlog-replies, and performs the sends.\n#\n\
+    #   agentmail-inbox-helper poll\n#       → JSON to stdout:\n#         {\"initialized\": N}       \
+    \                first run / ledger reset\n#         {\"new\": [{message_id, thread_id, from, subject,\
+    \ timestamp, text}]}\n#         {\"new\": []}                              nothing to do\n#   agentmail-inbox-helper\
+    \ reply <message_id>      reply text on stdin\n#       → sends the reply; on 2xx records the id in\
+    \ the ledger\n#   agentmail-inbox-helper mark <message_id>       record WITHOUT replying\n#      \
+    \ → for spam / bounces / stale mail\n#\n# Reads AGENTMAIL_API_KEY + AGENTMAIL_INBOX_ID from the environment,\
+    \ falling\n# back to parsing /root/.hermes/.env directly (cron contexts don't source it).\n# Ledger:\
+    \ /root/.hermes/state/agentmail_inbox_processed.json =\n# {\"processed_ids\": [\"<message_id>\", ...]}\
+    \ — written atomically, never any\n# other schema.\nimport json\nimport os\nimport sys\nimport urllib.error\n\
+    import urllib.parse\nimport urllib.request\nfrom datetime import datetime, timedelta, timezone\n\n\
+    API = \"https://api.agentmail.to/v0\"\nENV_FILE = \"/root/.hermes/.env\"\nLEDGER = \"/root/.hermes/state/agentmail_inbox_processed.json\"\
+    \nUA = \"orgo-agentmail-agent/0.1 (+https://orgo.ai)\"\nMAX_REPLIES_PER_TICK = 3\nSTALE_HOURS = 48\n\
+    \n\ndef env(name):\n    v = os.environ.get(name, \"\").strip()\n    if v:\n        return v\n    try:\n\
+    \        with open(ENV_FILE) as fh:\n            for line in fh:\n                if line.startswith(name\
+    \ + \"=\"):\n                    return line.split(\"=\", 1)[1].strip()\n    except OSError:\n   \
+    \     pass\n    return \"\"\n\n\nKEY = env(\"AGENTMAIL_API_KEY\")\nINBOX = env(\"AGENTMAIL_INBOX_ID\"\
+    ) or env(\"AGENTMAIL_INBOX\")\n\n\ndef die(msg):\n    print(json.dumps({\"error\": msg}))\n    sys.exit(1)\n\
+    \n\ndef call(method, path, body=None):\n    req = urllib.request.Request(\n        API + path,\n \
+    \       data=json.dumps(body).encode() if body is not None else None,\n        method=method,\n  \
+    \      headers={\"Authorization\": f\"Bearer {KEY}\",\n                 \"Content-Type\": \"application/json\"\
+    ,\n                 \"User-Agent\": UA},\n    )\n    with urllib.request.urlopen(req, timeout=30)\
+    \ as resp:\n        return json.load(resp)\n\n\ndef load_ledger():\n    # An EMPTY list is valid —\
+    \ a brand-new inbox has zero backlog at init\n    # time, and treating empty-as-corrupt made the next\
+    \ poll \"re-initialize\"\n    # the user's first email into the backlog (field-tested, twice). Only\
+    \ a\n    # missing file, unparseable JSON, or a wrong schema triggers init; the\n    # >5-new flood\
+    \ guard in cmd_poll covers genuine corruption.\n    try:\n        with open(LEDGER) as fh:\n     \
+    \       d = json.load(fh)\n        ids = d.get(\"processed_ids\")\n        if isinstance(ids, list):\n\
+    \            return set(ids)\n    except (OSError, json.JSONDecodeError, AttributeError):\n      \
+    \  pass\n    return None  # missing/unparseable/wrong-schema → caller must initialize\n\n\ndef save_ledger(ids):\n\
+    \    os.makedirs(os.path.dirname(LEDGER), exist_ok=True)\n    tmp = LEDGER + \".tmp\"\n    with open(tmp,\
+    \ \"w\") as fh:\n        json.dump({\"processed_ids\": sorted(ids)}, fh, indent=1)\n    os.replace(tmp,\
+    \ LEDGER)\n\n\ndef fetch_received():\n    q = urllib.parse.quote(INBOX)\n    d = call(\"GET\", f\"\
+    /inboxes/{q}/messages?limit=20&labels=received\")\n    return d.get(\"messages\", [])\n\n\ndef parse_ts(ts):\n\
+    \    try:\n        return datetime.fromisoformat(str(ts).replace(\"Z\", \"+00:00\"))\n    except ValueError:\n\
+    \        return None\n\n\ndef cmd_poll():\n    msgs = fetch_received()\n    ledger = load_ledger()\n\
+    \    if ledger is None:\n        save_ledger({m[\"message_id\"] for m in msgs})\n        print(json.dumps({\"\
+    initialized\": len(msgs), \"new\": []}))\n        return\n\n    fresh = [m for m in msgs if m.get(\"\
+    message_id\") not in ledger]\n    # Oldest first so conversations stay ordered.\n    fresh.sort(key=lambda\
+    \ m: str(m.get(\"timestamp\", \"\")))\n\n    # Guard: a flood of \"new\" mail means a broken ledger,\
+    \ not real traffic.\n    if len(fresh) > 5:\n        save_ledger(ledger | {m[\"message_id\"] for m\
+    \ in msgs})\n        print(json.dumps({\"reinitialized\": len(fresh), \"new\": []}))\n        return\n\
+    \n    now = datetime.now(timezone.utc)\n    out = []\n    for m in fresh:\n        ts = parse_ts(m.get(\"\
+    timestamp\"))\n        if ts and now - ts > timedelta(hours=STALE_HOURS):\n            ledger.add(m[\"\
+    message_id\"])          # stale → never auto-reply\n            continue\n        if len(out) >= MAX_REPLIES_PER_TICK:\n\
+    \            break                                # rest picked up next tick\n        q = urllib.parse.quote(INBOX)\n\
+    \        try:\n            full = call(\"GET\", f\"/inboxes/{q}/messages/\"\n                    \
+    \           f\"{urllib.parse.quote(m['message_id'])}\")\n        except Exception:  # noqa: BLE001\n\
+    \            full = m\n        out.append({\n            \"message_id\": m.get(\"message_id\"),\n\
+    \            \"thread_id\": m.get(\"thread_id\"),\n            \"from\": full.get(\"from\") or m.get(\"\
+    from\"),\n            \"subject\": full.get(\"subject\") or m.get(\"subject\"),\n            \"timestamp\"\
+    : m.get(\"timestamp\"),\n            \"text\": (full.get(\"extracted_text\") or full.get(\"text\"\
+    )\n                     or m.get(\"preview\") or \"\")[:4000],\n        })\n    save_ledger(ledger)\n\
+    \    print(json.dumps({\"new\": out}, indent=1))\n\n\ndef cmd_reply(message_id):\n    text = sys.stdin.read().strip()\n\
+    \    if not text:\n        die(\"empty reply text on stdin\")\n    q = urllib.parse.quote(INBOX)\n\
+    \    try:\n        call(\"POST\", f\"/inboxes/{q}/messages/{urllib.parse.quote(message_id)}/reply\"\
+    ,\n             {\"text\": text})\n    except urllib.error.HTTPError as e:\n        die(f\"reply failed:\
+    \ HTTP {e.code}\")\n    ledger = load_ledger() or set()\n    ledger.add(message_id)\n    save_ledger(ledger)\n\
+    \    print(json.dumps({\"replied\": message_id}))\n\n\ndef cmd_mark(message_id):\n    ledger = load_ledger()\
+    \ or set()\n    ledger.add(message_id)\n    save_ledger(ledger)\n    print(json.dumps({\"marked\"\
+    : message_id}))\n\n\ndef main():\n    if not KEY:\n        die(\"AGENTMAIL_API_KEY not set\")\n  \
+    \  if not INBOX:\n        die(\"AGENTMAIL_INBOX_ID not set\")\n    args = sys.argv[1:]\n    if args[:1]\
+    \ == [\"poll\"]:\n        cmd_poll()\n    elif args[:1] == [\"reply\"] and len(args) == 2:\n     \
+    \   cmd_reply(args[1])\n    elif args[:1] == [\"mark\"] and len(args) == 2:\n        cmd_mark(args[1])\n\
+    \    else:\n        die(\"usage: agentmail-inbox-helper poll | reply <message_id> | mark <message_id>\"\
+    )\n\n\nif __name__ == \"__main__\":\n    main()\n"
+  mode: '0755'
+  when: build
+- to: /usr/local/bin/agentmail-sync-mcp.py
+  inline: "#!/usr/bin/env python3\n# ==========================================================================\n\
+    # AgentMail Agent — enable MCP servers only when their key exists\n# ==========================================================================\n\
+    # The agentmail + composio MCP blocks ship enabled:false. A key-less enabled\n# server costs every\
+    \ cron run ~8 seconds of 401→retry→give-up (observed live)\n# and floods errors.log. This script flips\
+    \ each server's `enabled` to match\n# key presence; on_resume and the onboarding both call it (before\
+    \ the gateway\n# restart they already do), so pasting/vaulting a key is all a user does.\n#\n# Reads\
+    \ keys from the process env, falling back to ~/.hermes/.env.\nimport os\n\nimport yaml\n\nCONFIG =\
+    \ \"/root/.hermes/config.yaml\"\nENV_FILE = \"/root/.hermes/.env\"\nSERVERS = {\"agentmail\": \"AGENTMAIL_API_KEY\"\
+    , \"composio\": \"COMPOSIO_CONSUMER_KEY\"}\n\n\ndef env(name):\n    v = os.environ.get(name, \"\"\
+    ).strip()\n    if v:\n        return v\n    try:\n        with open(ENV_FILE) as fh:\n           \
+    \ for line in fh:\n                if line.startswith(name + \"=\"):\n                    return line.split(\"\
+    =\", 1)[1].strip()\n    except OSError:\n        pass\n    return \"\"\n\n\nwith open(CONFIG) as fh:\n\
+    \    cfg = yaml.safe_load(fh)\n\nmcp = cfg.get(\"mcp_servers\") or {}\nchanged = []\nfor server, var\
+    \ in SERVERS.items():\n    if server not in mcp:\n        continue\n    want = bool(env(var))\n  \
+    \  if bool(mcp[server].get(\"enabled\")) != want:\n        mcp[server][\"enabled\"] = want\n     \
+    \   changed.append(f\"{server}={'on' if want else 'off'}\")\n\nif changed:\n    tmp = CONFIG + \"\
+    .tmp\"\n    with open(tmp, \"w\") as fh:\n        yaml.safe_dump(cfg, fh, default_flow_style=False,\
+    \ sort_keys=False,\n                       allow_unicode=True, width=1000)\n    os.replace(tmp, CONFIG)\n\
+    \    os.chmod(CONFIG, 0o600)\n    print(f\"[sync-mcp] {', '.join(changed)} (restart the gateway to\
+    \ apply)\")\nelse:\n    print(\"[sync-mcp] no changes\")\n"
+  mode: '0755'
+  when: build
+- to: /usr/local/bin/agentmail-watchdog.sh
+  inline: "#!/bin/bash\n# ==========================================================================\n\
+    # AgentMail Agent — cron stuck-run watchdog (supervised service)\n# ==========================================================================\n\
+    # Hermes's cron ticker has an in-flight dedupe guard: while a job's previous\n# run is still executing,\
+    \ new ticks log \"already running — skipping\". Normally\n# correct — but a model call with no timeout\
+    \ (observed live: a chat stream to\n# the inference API that never returned) wedges the guard FOREVER,\
+    \ and the\n# ticker heartbeat stays green the whole time, so nothing else notices.\n#\n# This watchdog\
+    \ restarts the gateway only on that exact signature: the last\n# few ticker lines are all \"already\
+    \ running\" skips for our job AND no run\n# output has been produced recently. A restart clears the\
+    \ guard (the dedupe\n# set is in-process); the ledger and job survive, and the next tick resumes\n\
+    # replying — including anything that queued up while wedged.\nset +e\nLOG=/root/.hermes/logs/agent.log\n\
+    OUT=/root/.hermes/cron/output/agentmail-inb01\nWLOG=/var/log/orgo/agentmail-watchdog.log\nmkdir -p\
+    \ /var/log/orgo\n\nwhile true; do\n  sleep 120\n  [ -f /root/.hermes/cron/jobs.json ] || continue\n\
+    \  grep -q 'agentmail-inb01' /root/.hermes/cron/jobs.json 2>/dev/null || continue\n\n  # Signature\
+    \ 1: ≥3 consecutive \"already running — skipping\" ticker lines.\n  SKIPS=$(tail -n 6 \"$LOG\" 2>/dev/null\
+    \ | grep -c 'already running')\n  [ \"$SKIPS\" -ge 3 ] || continue\n\n  # Signature 2: no run output\
+    \ in the last 5 minutes (a healthy 1-min job\n  # writes one file per run) — guards against acting\
+    \ on stale log tails.\n  RECENT=$(find \"$OUT\" -name '*.md' -mmin -5 2>/dev/null | wc -l)\n  [ \"\
+    $RECENT\" -eq 0 ] || continue\n\n  echo \"$(date -Is) stuck in-flight guard (skips=$SKIPS, no output\
+    \ 5m) — restarting gateway\" >> \"$WLOG\"\n  if ! supervisorctl restart hermes-gateway >> \"$WLOG\"\
+    \ 2>&1; then\n    # supervisorctl can lose its socket (field-tested: a duplicate-supervisord\n   \
+    \ # boot where the socket owner died). Killing the gateway works regardless:\n    # whichever supervisor\
+    \ owns it has restart:always and revives it clean.\n    echo \"$(date -Is) supervisorctl failed —\
+    \ pkill fallback\" >> \"$WLOG\"\n    pkill -f 'hermes gateway run' >> \"$WLOG\" 2>&1\n  fi\n  sleep\
+    \ 300\ndone\n"
+  mode: '0755'
+  when: build
+- to: /root/Desktop/AgentMailSetup.desktop
+  inline: '[Desktop Entry]
+
+    Type=Application
+
+    Name=AgentMail Agent Setup
+
+    Comment=Finish setting up your email agent (Nous sign-in + AgentMail key)
+
+    Exec=/usr/local/bin/agentmail-onboard-launch.sh
+
+    Icon=mail-message-new
+
+    Terminal=false
+
+    '
+  mode: '0755'
+  when: build
+apps:
+- name: hermes-gateway
+  title: Hermes Gateway
+  description: Hermes gateway daemon — the AgentMail MCP connection and the cron scheduler running the
+    1-minute inbox auto-responder.
+  install: "set -e\nexport DEBIAN_FRONTEND=noninteractive\nexport HOME=/root\nexport HERMES_HOME=/root/.hermes\n\
+    export PATH=/usr/local/bin:/root/.hermes/bin:/root/.hermes/node/bin:/root/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH\n\
+    \n# 1) Hermes Agent — non-interactive, no wizard, no Playwright.\n#    git/ripgrep/ffmpeg are already\
+    \ apt-installed (build.apt), so the installer\n#    takes no apt path here; Node is auto-provisioned\
+    \ if the base lacks it.\ncurl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s --\
+    \ --non-interactive --skip-setup --skip-browser\nhash -r || true\n\n# 2) Place staged Hermes config/persona/env/skill\
+    \ AFTER the install so our\n#    files always win over anything the installer wrote.\nmkdir -p /root/.hermes/skills\
+    \ /root/.hermes/memories /root/.hermes/state \\\n         /var/log/orgo /var/lib/orgo\ncp -f  /opt/agentmail-agent/stage/hermes/config.yaml\
+    \ /root/.hermes/config.yaml\ncp -f  /opt/agentmail-agent/stage/hermes/SOUL.md     /root/.hermes/SOUL.md\n\
+    cp -f  /opt/agentmail-agent/stage/hermes/env         /root/.hermes/.env\ncp -rf /opt/agentmail-agent/stage/hermes/skills/.\
+    \    /root/.hermes/skills/\nchmod 600 /root/.hermes/config.yaml /root/.hermes/.env\n\n# 3) Desktop\
+    \ wallpaper (decode the baked base64).\nmkdir -p /usr/share/backgrounds\nbase64 -d /opt/agentmail-agent/wallpaper.b64\
+    \ > /usr/share/backgrounds/wallpaper.jpg\n\necho \"agentmail-agent install complete\""
+  services:
+  - name: hermes-gateway
+    title: Hermes gateway
+    run: /usr/local/bin/hermes-gateway-run.sh
+    user: root
+    restart: always
+  - name: agentmail-watchdog
+    title: Cron stuck-run watchdog
+    run: /usr/local/bin/agentmail-watchdog.sh
+    user: root
+    restart: always
+  autostart:
+  - run: /usr/local/bin/agentmail-onboard-launch.sh
+    delay: 10
+hooks:
+  on_first_boot: 'mkdir -p /var/lib/orgo /var/log/orgo /root/.hermes/memories /root/.hermes/state
+
+    [ -f /var/lib/orgo/agentmail-agent.stamp ] || echo "agentmail-agent first boot $(date -Iseconds)"
+    > /var/lib/orgo/agentmail-agent.stamp
+
+    # Lean + supervisord-safe (this also runs during the build). No hermes calls.'
+  on_resume: "# Fix any fresh-VM clock skew before the agent touches the network (SSL).\ndate -s \"$(curl\
+    \ -sI http://www.google.com | awk 'tolower($1)==\"date:\"{sub($1 FS,\"\");print}')\" 2>/dev/null ||\
+    \ true\n\nset -a; [ -f /root/.env ] && . /root/.env; [ -f /root/.hermes/.env ] && . /root/.hermes/.env;\
+    \ set +a\nmkdir -p /root/.hermes /root/.hermes/state\nE=/root/.hermes/.env; touch \"$E\"\n\n# Bridge\
+    \ any Orgo-vault-injected secrets into the file Hermes actually reads.\n# Idempotent strip-then-append;\
+    \ vault UPPER_SNAKE names == the keys config wants.\nfor K in AGENTMAIL_API_KEY COMPOSIO_CONSUMER_KEY;\
+    \ do\n  V=\"$(printenv \"$K\" 2>/dev/null || true)\"\n  [ -z \"$V\" ] && continue\n  grep -vE \"^${K}=\"\
+    \ \"$E\" > \"$E.tmp\" 2>/dev/null || true\n  mv \"$E.tmp\" \"$E\"\n  echo \"${K}=${V}\" >> \"$E\"\n\
+    done\nchmod 600 \"$E\"\n\n# Create the agent's inbox the moment a key exists (idempotent, no-op without\n\
+    # one), re-source the env it pinned, then seed the 1-minute inbox responder.\nset -a; . \"$E\"; set\
+    \ +a\npython3 /usr/local/bin/agentmail-bootstrap-inbox.py || true\nset -a; . \"$E\"; set +a\npython3\
+    \ /usr/local/bin/agentmail-seed-inbox-cron.py || true\n\n# Initialize the dedupe ledger immediately\
+    \ so mail arriving before the first\n# poller tick is treated as new, never absorbed as backlog.\n\
+    [ -n \"$AGENTMAIL_INBOX_ID\" ] && python3 /usr/local/bin/agentmail-inbox-helper.py poll >/dev/null\
+    \ 2>&1 || true\n\n# Enable/disable the agentmail+composio MCP servers to match key presence\n# (a\
+    \ key-less enabled server costs every cron run ~8s of 401 retries).\npython3 /usr/local/bin/agentmail-sync-mcp.py\
+    \ || true\n\n# Restart the gateway so it re-reads .env + config (Hermes has no hot reload).\nsupervisorctl\
+    \ restart hermes-gateway 2>/dev/null || true"
+  on_every_boot: "export DISPLAY=\"${DISPLAY:-:99}\"\nWP=/usr/share/backgrounds/wallpaper.jpg\n[ -f \"\
+    $WP\" ] || exit 0\nfor p in $(xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E 'last-image|image-path');\
+    \ do\n  xfconf-query -c xfce4-desktop -p \"$p\" -s \"$WP\" 2>/dev/null || true\ndone\nxfconf-query\
+    \ -c xfce4-desktop -p /backdrop/screen0/monitor0/image-path -s \"$WP\" --create -t string 2>/dev/null\
+    \ || true"
+terminal:
+- name: hermes
+  title: Hermes
+  description: Host shell for the email agent (hermes auth, logs, config).
+  cwd: /root
