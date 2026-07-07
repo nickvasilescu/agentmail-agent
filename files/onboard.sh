@@ -87,6 +87,9 @@ if [ -n "$AGENTMAIL_API_KEY" ] || grep -q '^AGENTMAIL_API_KEY=..' "$ENV_FILE" 2>
   python3 /usr/local/bin/agentmail-sync-mcp.py || true
   say "Restarting the gateway so it picks everything up…"
   supervisorctl restart hermes-gateway 2>/dev/null || true
+  # Kick the WebSocket listener too so it picks the key up instantly
+  # instead of on its idle poll.
+  supervisorctl restart agentmail-listener 2>/dev/null || true
 fi
 
 # --- Done ------------------------------------------------------------------
@@ -98,8 +101,9 @@ if [ -s "$HERMES_HOME/auth.json" ] && [ -n "$AGENTMAIL_INBOX" ]; then
   echo
   printf '\033[1;33m    📬  %s\033[0m\n' "$AGENTMAIL_INBOX"
   echo
-  echo "Send it an email right now — it replies within about a minute, and it"
-  echo "has a real computer: ask it to research, fetch, summarize, or build."
+  echo "Send it an email right now — replies land in seconds (a live WebSocket"
+  echo "watches the inbox; a 5-minute poller covers outages), and it has a real"
+  echo "computer: ask it to research, fetch, summarize, or build."
   echo
   echo "Optional extras (paste a key in ~/.hermes/.env, or just tell the agent):"
   echo "  • Composio (1000+ apps):  COMPOSIO_CONSUMER_KEY=ck_…  (app.composio.dev)"

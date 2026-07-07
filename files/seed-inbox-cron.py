@@ -1,20 +1,26 @@
 #!/usr/bin/env python3
 # ==========================================================================
-# AgentMail Agent — seed the inbox auto-responder cron job
+# AgentMail Agent — seed the inbox auto-responder cron job (fallback path)
 # ==========================================================================
-# The heart of the template: a 1-minute Hermes cron job (deliver: local,
-# terminal toolset) that polls the agent's AgentMail inbox and replies to new
-# inbound mail — the "webhook experience" with zero webhook setup and no
-# public endpoint on the VM. Same proven pattern as Nick's Stack's AgentPhone
-# SMS bridge.
+# Since 0.2.0 the PRIMARY responder trigger is the WebSocket listener
+# (agentmail-inbox-listener.py — instant message.received events, no public
+# endpoint). This cron is the degraded-mode fallback: every 5 minutes, and
+# `poll --cron` makes it a no-op (zero API calls) while the listener
+# heartbeat is fresh. It only actually polls when the socket is down
+# (AgentMail outage, network blip, listener crash-loop).
 #
-# Idempotent: only seeds when AGENTMAIL_API_KEY + AGENTMAIL_INBOX_ID are both
-# present AND the job doesn't already exist. Callers source /root/.env and
+# Idempotent + self-migrating: seeds when AGENTMAIL_API_KEY +
+# AGENTMAIL_INBOX_ID are both present; if the job already exists with the
+# pre-0.2.0 shape (1-minute schedule / prompt without --cron) it is updated
+# in place, otherwise left untouched. Callers source /root/.env and
 # ~/.hermes/.env first (on_resume and the onboarding both do).
 import json
 import os
 import sys
 from datetime import datetime, timezone
+
+sys.path.insert(0, "/usr/local/bin")
+import agentmail_inbox_core as core  # noqa: E402
 
 JOBS_FILE = "/root/.hermes/cron/jobs.json"
 JOB_ID = "agentmail-inb01"           # any 12+ char path-safe id
@@ -30,34 +36,8 @@ if not (API_KEY and INBOX_ID):
     print("[seed-inbox-cron] AgentMail key/inbox not both set — skipping cron seed.")
     sys.exit(0)
 
-PROMPT = (
-    "You are the email auto-responder for this computer's AgentMail inbox "
-    f"({INBOX}). A deterministic helper script does ALL the mechanical work "
-    "(polling, dedupe ledger, guard rails, sending). You only decide what to say.\n\n"
-    "Identity: a concise, helpful AI assistant with its own cloud computer. "
-    "Do not claim to be human.\n\n"
-    "Run procedure every tick:\n"
-    "1. Run in the terminal:  python3 /usr/local/bin/agentmail-inbox-helper.py poll\n"
-    "   It prints JSON. If \"new\" is empty (or it reports initialized/reinitialized), "
-    "end with exactly: \"No new mail.\" Because deliver is local, this notifies no one.\n"
-    "2. For each message in \"new\" (they arrive with from/subject/text):\n"
-    "   - If it asks for real work (research, summarize, fetch a page, compute "
-    "something), DO the work with your tools first, then write a short, natural "
-    "reply containing the answer or result.\n"
-    "   - If it is just a greeting or a test, briefly acknowledge that the agent "
-    "is live and say what you can do.\n"
-    "   - Obvious spam, marketing, or bounce notifications: do NOT reply — run  "
-    "python3 /usr/local/bin/agentmail-inbox-helper.py mark <message_id>\n"
-    "3. Send each reply by piping the text to:  "
-    "python3 /usr/local/bin/agentmail-inbox-helper.py reply <message_id>\n"
-    "   (heredoc works well:  python3 …helper.py reply '<id>' <<'EOF' … EOF )\n"
-    "   The helper records the ledger on success; if it errors, do not retry more "
-    "than once — the next tick will retry.\n"
-    "4. Keep replies plain text, friendly, and signed off simply. Never include "
-    "API keys or file paths from this machine in an email.\n\n"
-    "Important: You are running unattended. Do not ask for clarification. "
-    "Do not schedule more cron jobs."
-)
+PROMPT = core.responder_prompt(INBOX, cron=True)
+SCHEDULE = {"kind": "interval", "minutes": 5, "display": "every 5m"}
 
 job = {
     "id": JOB_ID,
@@ -71,8 +51,8 @@ job = {
     "script": None,
     "no_agent": False,
     "context_from": None,
-    "schedule": {"kind": "interval", "minutes": 1, "display": "every 1m"},
-    "schedule_display": "every 1m",
+    "schedule": dict(SCHEDULE),
+    "schedule_display": SCHEDULE["display"],
     "repeat": {"times": None, "completed": 0},
     "enabled": True,
     "state": "scheduled",
@@ -101,11 +81,24 @@ except (FileNotFoundError, json.JSONDecodeError):
     data = {"jobs": []}
 
 jobs = data.get("jobs", [])
-if any(j.get("name") == JOB_NAME for j in jobs):
-    print("[seed-inbox-cron] inbox auto-responder already present — leaving as-is.")
-    sys.exit(0)
+existing = next((j for j in jobs if j.get("name") == JOB_NAME), None)
+if existing is not None:
+    up_to_date = (existing.get("schedule", {}).get("minutes") == SCHEDULE["minutes"]
+                  and "--cron" in str(existing.get("prompt", "")))
+    if up_to_date:
+        print("[seed-inbox-cron] inbox auto-responder already current — leaving as-is.")
+        sys.exit(0)
+    # In-place migration (0.1.x → 0.2.0): keep identity/state fields, update
+    # the schedule + prompt; next_run_at cleared so the loader recomputes.
+    existing["prompt"] = PROMPT
+    existing["schedule"] = dict(SCHEDULE)
+    existing["schedule_display"] = SCHEDULE["display"]
+    existing["next_run_at"] = None
+    action = "Migrated"
+else:
+    jobs.append(job)
+    action = "Seeded"
 
-jobs.append(job)
 data["jobs"] = jobs
 data["updated_at"] = datetime.now(timezone.utc).isoformat()
 
@@ -115,4 +108,5 @@ with open(tmp, "w") as fh:
 os.replace(tmp, JOBS_FILE)
 os.chmod(JOBS_FILE, 0o600)
 os.chmod(os.path.dirname(JOBS_FILE), 0o700)
-print("[seed-inbox-cron] Seeded agentmail-inbox-auto-responder (every 1m, deliver local).")
+print(f"[seed-inbox-cron] {action} {JOB_NAME} (every 5m fallback, deliver local; "
+      "WebSocket listener is the primary trigger).")

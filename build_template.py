@@ -41,7 +41,20 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FILES = os.path.join(HERE, "files")
 NAMESPACE = "default"
 NAME = "agentmail-agent"
-VERSION = os.environ.get("VERSION", "0.1.0")
+VERSION = os.environ.get("VERSION", "0.2.0")
+AGENTMAIL_SDK = "agentmail==0.5.6"   # exact pin — an unpinned SDK is a rebuild time-bomb
+
+# Keyed-golden knobs (catalog convention: @X.Y.(Z+1) tagged [PERSONAL]).
+# The repo stays key-less: pass these ONLY as env vars at build time.
+#   AGENTMAIL_BAKE_KEY   — am_… key baked into ~/.hermes/.env in the golden;
+#                          onboarding step 2 auto-skips and on_resume creates
+#                          the inbox at launch with zero touches.
+#   AGENTMAIL_BAKE_MODEL — override the model everywhere (config default for
+#                          the listener's `hermes -z` + AGENTMAIL_AGENT_MODEL
+#                          for the cron seed), e.g. tencent/hy3:free for a
+#                          Nous account without credits.
+BAKE_KEY = os.environ.get("AGENTMAIL_BAKE_KEY", "").strip()
+BAKE_MODEL = os.environ.get("AGENTMAIL_BAKE_MODEL", "").strip()
 API_BASE = os.environ.get("ORGO_API_BASE", "https://www.orgo.ai/api")
 API_KEY = os.environ.get("ORGO_API_KEY", "")
 
@@ -66,11 +79,20 @@ def F(to, body, mode="0644", when="build"):
 # --------------------------------------------------------------------------
 STAGE = "/opt/agentmail-agent/stage"
 
+_config_yaml = rd("config.yaml")
+_hermes_env = rd("hermes.env")
+if BAKE_MODEL:
+    _config_yaml = _config_yaml.replace("default: openai/gpt-5.5",
+                                        f"default: {BAKE_MODEL}", 1)
+    _hermes_env += f"\nAGENTMAIL_AGENT_MODEL={BAKE_MODEL}\n"
+if BAKE_KEY:
+    _hermes_env += f"AGENTMAIL_API_KEY={BAKE_KEY}\n"
+
 files = [
     # --- staged Hermes config / persona / env / skill ---
-    F(f"{STAGE}/hermes/config.yaml", rd("config.yaml"), "0600"),
+    F(f"{STAGE}/hermes/config.yaml", _config_yaml, "0600"),
     F(f"{STAGE}/hermes/SOUL.md", rd("SOUL.md"), "0644"),
-    F(f"{STAGE}/hermes/env", rd("hermes.env"), "0600"),
+    F(f"{STAGE}/hermes/env", _hermes_env, "0600"),
     F(f"{STAGE}/hermes/skills/email/agentmail-inbox/SKILL.md",
       rd("skills/agentmail-inbox/SKILL.md"), "0644"),
     F(f"{STAGE}/hermes/skills/email/agentmail-inbox/references/agentmail-api.md",
@@ -84,6 +106,9 @@ files = [
     F("/usr/local/bin/agentmail-bootstrap-inbox.py", rd("bootstrap-inbox.py"), "0755"),
     F("/usr/local/bin/agentmail-seed-inbox-cron.py", rd("seed-inbox-cron.py"), "0755"),
     F("/usr/local/bin/agentmail-inbox-helper.py", rd("inbox-helper.py"), "0755"),
+    F("/usr/local/bin/agentmail_inbox_core.py", rd("inbox_core.py"), "0644"),
+    F("/usr/local/bin/agentmail-inbox-listener.py", rd("inbox-listener.py"), "0755"),
+    F("/usr/local/bin/agentmail-listener-run.sh", rd("listener-run.sh"), "0755"),
     F("/usr/local/bin/agentmail-sync-mcp.py", rd("sync-mcp.py"), "0755"),
     F("/usr/local/bin/agentmail-watchdog.sh", rd("watchdog.sh"), "0755"),
     # --- desktop icon ---
@@ -119,6 +144,21 @@ chmod 600 /root/.hermes/config.yaml /root/.hermes/.env
 # 3) Desktop wallpaper (decode the baked base64).
 mkdir -p /usr/share/backgrounds
 base64 -d /opt/agentmail-agent/wallpaper.b64 > /usr/share/backgrounds/wallpaper.jpg
+
+# 4) Dedicated venv for the AgentMail SDK (WebSocket listener only — the
+#    reply/ledger path stays stdlib REST). The base image has no pip, but the
+#    Hermes installer ships uv; `uv venv` needs no python3-venv/ensurepip and
+#    the SDK deps are pure wheels — zero apt, zero libssl/supervisord risk.
+UV="$(command -v uv || echo /root/.hermes/bin/uv)"
+"$UV" venv /opt/agentmail-agent/venv
+for i in 1 2 3; do
+  "$UV" pip install --python /opt/agentmail-agent/venv/bin/python "{AGENTMAIL_SDK}" && break
+  sleep 5
+done
+# Import self-test: a broken SDK install must fail the build LOUDLY here,
+# not ship a silently dead listener.
+/opt/agentmail-agent/venv/bin/python -c "from agentmail import AgentMail, Subscribe, MessageReceivedEvent" \\
+  || {{ echo "agentmail SDK import self-test FAILED"; exit 1; }}
 
 echo "agentmail-agent install complete"
 """.strip()
@@ -171,6 +211,9 @@ python3 /usr/local/bin/agentmail-sync-mcp.py || true
 
 # Restart the gateway so it re-reads .env + config (Hermes has no hot reload).
 supervisorctl restart hermes-gateway 2>/dev/null || true
+# Kick the WebSocket listener too so a vault-injected key is picked up
+# immediately (it would otherwise wait for its 10s idle poll).
+supervisorctl restart agentmail-listener 2>/dev/null || true
 """.strip()
 
 # on_every_boot: reassert the branded wallpaper (monitor-name-independent loop).
@@ -194,10 +237,13 @@ template = {
         "version": VERSION,
         "description": ("AgentMail Agent — a persistent AI agent whose front door is its "
                         "own email inbox. One key (am_…) and it's live: the inbox is "
-                        "created automatically, every inbound email gets read, worked on, "
-                        "and answered within a minute — webhook-grade behavior with zero "
-                        "webhook setup. Hermes runtime, gpt-5.5 via Nous, full computer "
-                        "included."),
+                        "created automatically and a live WebSocket watches it, so every "
+                        "inbound email gets read, worked on, and answered in seconds — "
+                        "no public endpoint, no webhook setup (a 5-minute poller covers "
+                        "outages). Hermes runtime, gpt-5.5 via Nous, full computer "
+                        "included."
+                        + (" [PERSONAL — AgentMail key baked; onboarding is the "
+                           "Nous sign-in only.]" if BAKE_KEY else "")),
         "publisher": "orgo",
         "license": "MIT",
         "homepage": "https://agentmail.to",
@@ -238,7 +284,8 @@ template = {
             "name": "hermes-gateway",
             "title": "Hermes Gateway",
             "description": ("Hermes gateway daemon — the AgentMail MCP connection and the "
-                            "cron scheduler running the 1-minute inbox auto-responder."),
+                            "cron scheduler running the 5-minute fallback poller behind "
+                            "the WebSocket inbox listener."),
             "install": INSTALL,
             "services": [
                 {
@@ -250,8 +297,15 @@ template = {
                 },
                 {
                     "name": "agentmail-watchdog",
-                    "title": "Cron stuck-run watchdog",
+                    "title": "Responder watchdog",
                     "run": "/usr/local/bin/agentmail-watchdog.sh",
+                    "user": "root",
+                    "restart": "always",
+                },
+                {
+                    "name": "agentmail-listener",
+                    "title": "AgentMail WebSocket listener",
+                    "run": "/usr/local/bin/agentmail-listener-run.sh",
                     "user": "root",
                     "restart": "always",
                 },

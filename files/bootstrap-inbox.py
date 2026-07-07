@@ -55,11 +55,24 @@ def call(method, path, body=None):
 
 # Stable per-VM client_id so re-runs (and golden re-launches that kept state)
 # converge on the same inbox instead of minting new ones.
+# NOT /etc/machine-id: that is baked into the golden snapshot, so it is
+# IDENTICAL on every VM launched from the same golden — all launches would
+# converge on ONE inbox (field-hit: a fresh launch 409'd "Inbox is being
+# deleted" against a prior VM's tombstoned inbox). This file never exists in
+# the golden (bootstrap only runs at launch), so each VM mints its own once
+# and re-runs on the same VM keep it.
+IID_FILE = "/var/lib/orgo/agentmail-instance-id"
 try:
-    with open("/etc/machine-id") as fh:
-        vm = fh.read().strip()[:12]
+    with open(IID_FILE) as fh:
+        vm = fh.read().strip()
+    if not vm:
+        raise OSError
 except OSError:
-    vm = "unknown"
+    import uuid
+    vm = uuid.uuid4().hex[:12]
+    os.makedirs(os.path.dirname(IID_FILE), exist_ok=True)
+    with open(IID_FILE, "w") as fh:
+        fh.write(vm)
 client_id = f"orgo-agentmail-agent-{vm}"
 
 inbox = None
