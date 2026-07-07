@@ -13,7 +13,7 @@ for you at first boot, and a supervised **AgentMail WebSocket listener**
 `message.received` fires — with a 5-minute poller as the automatic fallback
 whenever the socket is down.
 
-![AgentMail × Orgo](files/wallpaper.jpg)
+![AgentMail Agent — the desktop](files/wallpaper.jpg)
 
 ## What you need
 
@@ -96,7 +96,7 @@ Email it. Replies land in seconds — work included.
 ```
 agentmail-agent.orgo.yaml   # the whole template as one readable document
 build_template.py           # assemble → validate → publish → build → launch
-make_wallpaper.py           # regenerates files/wallpaper.jpg (pure PIL)
+make_wallpaper.py           # regenerates files/wallpaper.jpg (PIL + official logo)
 assets/                     # official AgentMail brand assets (see SOURCES.md)
 files/                      # everything baked into the VM
 ├── config.yaml             #   Hermes config (model, MCP servers)
